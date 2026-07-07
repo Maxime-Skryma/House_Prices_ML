@@ -9,6 +9,7 @@ from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
 
 def preprocessing(df,power_transformer=None,imputer=None):
+    df.drop(columns=['Id'], inplace=True)
     
     #On fill les NaN
     cat_cols = df.select_dtypes(exclude='number').columns
@@ -75,13 +76,12 @@ def preprocessing(df,power_transformer=None,imputer=None):
             if abs(df_train[c].skew()) > 1:
                 df_train[[c]] = power_transformer.transform(df_train[[c]])
     
+    df_imputer=df.select_dtypes(include=["number","bool"])
     if imputer is None:
         imputer = IterativeImputer(random_state=42)
-        df_imputer=df.select_dtypes(include=["number","bool"])
-        df_train = pd.DataFrame(imputer.fit_transform(df_imputer),columns=df_imputer.columns,index=df_imputer.index)
-        
+        df = pd.DataFrame(imputer.fit_transform(df_imputer),columns=df_imputer.columns,index=df_imputer.index)
+    else:
+        df = pd.DataFrame(imputer.transform(df_imputer),columns=df_imputer.columns,index=df_imputer.index)
 
 
-
-
-    return df, power_transformer
+    return df, power_transformer , imputer
