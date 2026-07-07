@@ -48,12 +48,12 @@ def preprocessing(df,power_transformer=None,imputer=None):
 
         'GarageFinish': ['None', 'Unf', 'RFn', 'Fin'],              # NA = No Garage
 
-        'LotShape':     ['Reg', 'IR1', 'IR2', 'IR3'],
-        'LandSlope':    ['Gtl', 'Mod', 'Sev'],
-        'Utilities':    ['ELO', 'NoSeWa', 'NoSewr', 'AllPub'],
-        'PavedDrive':   ['N', 'P', 'Y'],
-
-        'Functional':   ['Sal', 'Sev', 'Maj2', 'Maj1', 'Mod', 'Min2', 'Min1', 'Typ'],
+        'Utilities':   ['None', 'ELO', 'NoSeWa', 'NoSewr', 'AllPub'],
+        'LotShape':    ['None', 'Reg', 'IR1', 'IR2', 'IR3'],
+        'LandSlope':   ['None', 'Gtl', 'Mod', 'Sev'],
+        'PavedDrive':  ['None', 'N', 'P', 'Y'],
+        'Functional':  ['None', 'Sal', 'Sev', 'Maj2', 'Maj1', 'Mod', 'Min2', 'Min1', 'Typ'],
+    
 
         'Fence':        ['None', 'MnWw', 'GdWo', 'MnPrv', 'GdPrv'],  # ordre discutable, cf. remarque
     }
@@ -63,6 +63,8 @@ def preprocessing(df,power_transformer=None,imputer=None):
     for c in ordinal_scales:
         mapping = {cat: i for i, cat in enumerate(ordinal_scales[c])}
         df[c] = df[c].map(mapping)
+        if df[c].isna().any():
+            raise ValueError(f"{c} : modalités non mappées → {df.loc[df[c].isna(), c]}")
 
 
     reste_col=df.select_dtypes(exclude='number').columns
@@ -78,7 +80,7 @@ def preprocessing(df,power_transformer=None,imputer=None):
 
     if power_transformer is None:
         skew_cols = [c for c in cat_cols if abs(df[c].skew()) > 1]
-        power_transformer = PowerTransformer(method='yeo-johnson')
+        power_transformer = PowerTransformer(method='yeo-johnson',standardize=False)
         df[skew_cols] = power_transformer.fit_transform(df[skew_cols])
     else:
         skew_cols = list(power_transformer.feature_names_in_)
