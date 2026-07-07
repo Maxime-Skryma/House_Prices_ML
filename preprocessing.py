@@ -9,7 +9,7 @@ from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
 
 def preprocessing(df,power_transformer=None,imputer=None):
-    df.drop(columns=['Id'], inplace=True)
+    df = df.drop(columns=['Id'])
     
     #On fill les NaN
     cat_cols = df.select_dtypes(exclude='number').columns
@@ -17,7 +17,7 @@ def preprocessing(df,power_transformer=None,imputer=None):
 
     #On crée une catégories Pool (apporte +d'infos)
     df['Pool']=(df['PoolArea']>0).astype(float)
-    df=df.drop(['PoolArea'])
+    df = df.drop(columns=['PoolArea'])
 
     #Modification des variables catégorielles qui sont en fait ordinales
 
@@ -57,31 +57,43 @@ def preprocessing(df,power_transformer=None,imputer=None):
 
         'Fence':        ['None', 'MnWw', 'GdWo', 'MnPrv', 'GdPrv'],  # ordre discutable, cf. remarque
     }
-
-    #On 'ordinalise' et on 'dummies' ce qui reste
-    reste_col=df_train.select_dtypes(exclude='number').columns.drop(list(ordinal_scales.keys()))
-    df_train = pd.get_dummies(df_train, columns=reste_col, drop_first=True)
-
     
+    #On 'ordinalise' et on 'dummies' ce qui reste
+
+    for c in ordinal_scales:
+        mapping = {cat: i for i, cat in enumerate(ordinal_scales[c])}
+        df[c] = df[c].map(mapping)
+
+
+    reste_col=df.select_dtypes(exclude='number').columns
+    df = pd.get_dummies(df, columns=reste_col, drop_first=True)
+
+    if imputer is None:
+        train_columns = df.columns
+    else:
+        df = df.reindex(columns=imputer.train_columns, fill_value=0)
+
     #On transforme les variables avec un skew trop élevé avec la méthode yeo-johnson
-    cat_cols = df_train.select_dtypes(include='number').columns
+    cat_cols = df.select_dtypes(include='number').columns
 
     if power_transformer is None:
+        skew_cols = [c for c in cat_cols if abs(df[c].skew()) > 1]
         power_transformer = PowerTransformer(method='yeo-johnson')
-        for c in cat_cols:
-            if abs(df_train[c].skew()) > 1:
-                df_train[[c]] = power_transformer.fit_transform(df_train[[c]])
+        df[skew_cols] = power_transformer.fit_transform(df[skew_cols])
     else:
-        for c in cat_cols:
-            if abs(df_train[c].skew()) > 1:
-                df_train[[c]] = power_transformer.transform(df_train[[c]])
+        skew_cols = list(power_transformer.feature_names_in_)
+        df[skew_cols] = power_transformer.transform(df[skew_cols])
     
     df_imputer=df.select_dtypes(include=["number","bool"])
+
     if imputer is None:
         imputer = IterativeImputer(random_state=42)
-        df = pd.DataFrame(imputer.fit_transform(df_imputer),columns=df_imputer.columns,index=df_imputer.index)
+        df = pd.DataFrame(imputer.fit_transform(df_imputer),
+                        columns=df_imputer.columns, index=df_imputer.index)
+        imputer.train_columns = train_columns
     else:
-        df = pd.DataFrame(imputer.transform(df_imputer),columns=df_imputer.columns,index=df_imputer.index)
+        df = pd.DataFrame(imputer.transform(df_imputer),
+                        columns=df_imputer.columns, index=df_imputer.index)
 
 
     return df, power_transformer , imputer
