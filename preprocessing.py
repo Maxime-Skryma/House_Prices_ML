@@ -5,6 +5,7 @@ import numpy as np
 import seaborn as sns
 from sklearn.preprocessing import PowerTransformer
 from scipy.stats import f_oneway
+from sklearn.impute import SimpleImputer
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
 
@@ -79,7 +80,7 @@ def preprocessing(df,power_transformer=None,imputer=None):
     cat_cols = df.select_dtypes(include='number').columns
 
     if power_transformer is None:
-        skew_cols = [c for c in cat_cols if abs(df[c].skew()) > 1]
+        skew_cols = [c for c in cat_cols if (abs(df[c].skew()) > 1 and abs(df[c].skew()) < 5) ]
         power_transformer = PowerTransformer(method='yeo-johnson',standardize=False)
         df[skew_cols] = power_transformer.fit_transform(df[skew_cols])
     else:
