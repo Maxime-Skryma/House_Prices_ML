@@ -69,7 +69,7 @@ def preprocessing(df,power_transformer=None,imputer=None):
 
 
     reste_col=df.select_dtypes(exclude='number').columns
-    df = pd.get_dummies(df, columns=reste_col, drop_first=True)
+    df = pd.get_dummies(df, columns=reste_col)
 
     if imputer is None:
         train_columns = df.columns
