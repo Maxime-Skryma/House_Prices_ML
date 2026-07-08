@@ -79,9 +79,12 @@ def preprocessing(df,power_transformer=None,imputer=None):
     #On transforme les variables avec un skew trop élevé avec la méthode yeo-johnson
     cat_cols = df.select_dtypes(include='number').columns
 
+    ordinal_cols = list(ordinal_scales.keys())
+
     if power_transformer is None:
-        skew_cols = [c for c in cat_cols if (abs(df[c].skew()) > 1 and abs(df[c].skew()) < 5) ]
-        power_transformer = PowerTransformer(method='yeo-johnson',standardize=False)
+        skew_cols = [c for c in cat_cols
+                    if c not in ordinal_cols and abs(df[c].skew()) > 1]
+        power_transformer = PowerTransformer(method='yeo-johnson', standardize=False)
         df[skew_cols] = power_transformer.fit_transform(df[skew_cols])
     else:
         skew_cols = list(power_transformer.feature_names_in_)
